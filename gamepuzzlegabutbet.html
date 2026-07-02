@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Game Puzzle Gabut</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000000;
+    --surface:#121212;
+    --surface-2:#181818;
+    --line:#262626;
+    --line-soft:#1e1e1e;
+    --ink:#f2f2f2;
+    --ink-dim:#7a7a7a;
+    --ink-faint:#4d4d4d;
+    --accent:#ffffff;
+    --accent-ink:#0a0a0a;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 14px;
+  }
+
+  .app{
+    position:relative;
+    width:100%;
+    max-width:580px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+
+  .note{
+    width:100%;
+    text-align:center;
+    font-size:11.5px;
+    color:var(--ink-faint);
+    letter-spacing:.01em;
+    padding:0 4px;
+  }
+
+  #topShareBtn{
+    width:100%;
+    background:transparent;
+    border:none;
+    color:var(--ink-dim);
+    font-family:'Inter', sans-serif;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    text-decoration:underline;
+    text-underline-offset:3px;
+    padding:0 0 4px;
+    cursor:pointer;
+    text-align:center;
+  }
+  #topShareBtn:active{opacity:.7;}
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:28px;
+    transform:translateX(-50%) translateY(10px);
+    background:var(--accent);
+    color:var(--accent-ink);
+    font-size:12.5px;
+    font-weight:600;
+    padding:10px 16px;
+    border-radius:20px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:50;
+    white-space:nowrap;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  .play-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    gap:14px;
+    width:100%;
+  }
+
+  .left-col{
+    flex:1 1 auto;
+    max-width:400px;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+
+  .card{
+    width:100%;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:18px;
+    overflow:hidden;
+  }
+
+  .header-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:14px 16px 12px;
+  }
+  .field{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .field span{
+    font-size:11px;
+    color:var(--ink-dim);
+    white-space:nowrap;
+  }
+  #playerName{
+    width:100px;
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    text-align:left;
+    padding:3px 2px;
+    outline:none;
+  }
+  #playerName:focus{border-bottom-color:var(--ink-dim);}
+
+  #levelSelect{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:12px;
+    border-radius:7px;
+    padding:6px 8px;
+    outline:none;
+    cursor:pointer;
+  }
+
+  .frame{
+    position:relative;
+    margin:0 14px;
+    padding:14px;
+    background:var(--surface-2);
+    border-top:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .puzzle-grid{
+    position:relative;
+    width:100%;
+    aspect-ratio:1/1;
+    display:grid;
+    gap:3px;
+    background:#000;
+    border-radius:8px;
+    overflow:hidden;
+    cursor:pointer;
+  }
+  .tile{
+    position:relative;
+    background-repeat:no-repeat;
+    background-color:#0e0e0e;
+    cursor:pointer;
+  }
+  .tile.blank{
+    background:#000 !important;
+    cursor:default;
+  }
+  .placeholder-msg{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    text-align:center;
+    color:var(--ink-dim);
+    font-size:13.5px;
+    padding:20px;
+    line-height:1.5;
+  }
+  .placeholder-msg .plus{
+    font-size:32px;
+    color:var(--ink-dim);
+    line-height:1;
+    font-weight:300;
+  }
+  #imageInput{display:none;}
+
+  .controls-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:14px 16px 16px;
+  }
+  .timer-block{display:flex; flex-direction:column;}
+  .timer-label{
+    font-size:9.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  #timer{
+    font-size:24px;
+    font-weight:700;
+    letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .move-count{
+    font-size:11px;
+    color:var(--ink-faint);
+    margin-top:1px;
+  }
+  #startBtn{
+    background:var(--accent);
+    color:var(--accent-ink);
+    border:none;
+    border-radius:10px;
+    padding:12px 26px;
+    font-weight:700;
+    font-size:14px;
+    font-family:'Inter', sans-serif;
+    cursor:pointer;
+    letter-spacing:.01em;
+  }
+  #startBtn:disabled{
+    background:var(--line);
+    color:var(--ink-faint);
+    cursor:not-allowed;
+  }
+  #startBtn:active:not(:disabled){transform:scale(.97);}
+
+  .ref-preview{
+    flex:0 0 120px;
+    width:120px;
+    height:120px;
+    border-radius:14px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-top:28px;
+  }
+  .ref-preview img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:none;
+  }
+  .ref-preview .ref-icon{
+    font-size:22px;
+    color:var(--ink-faint);
+  }
+  .ref-caption{
+    font-size:9.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    text-align:center;
+    margin-top:6px;
+  }
+  .ref-col{
+    flex:0 0 120px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+  }
+
+  @media (max-width:520px){
+    .play-row{flex-direction:column; align-items:center;}
+    .left-col{max-width:420px; width:100%;}
+    .ref-col{flex:0 0 auto; flex-direction:row; gap:10px; align-items:center; margin-top:4px;}
+    .ref-preview{margin-top:0;}
+    #topShareBtn{width:auto; padding-bottom:0;}
+  }
+
+  .share-actions{
+    width:100%;
+    display:flex;
+    gap:8px;
+    animation: fadeUp .35s ease;
+  }
+  @keyframes fadeUp{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .hidden{display:none !important;}
+
+  .btn{
+    flex:1;
+    border:none;
+    border-radius:10px;
+    padding:13px 10px;
+    font-size:13.5px;
+    font-weight:600;
+    font-family:'Inter', sans-serif;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  .btn-primary{
+    background:var(--accent);
+    color:var(--accent-ink);
+  }
+  .btn-secondary{
+    background:var(--surface);
+    color:var(--ink);
+    border:1px solid var(--line);
+  }
+  .btn:active{transform:scale(.97);}
+
+  #captureCard{
+    position:fixed;
+    left:-9999px;
+    top:0;
+  }
+
+  .footer{
+    margin-top:6px;
+    display:flex;
+    justify-content:center;
+  }
+  .ig-follow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 18px;
+    border-radius:999px;
+    background:linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7);
+    color:#fff;
+    text-decoration:none;
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.01em;
+  }
+  .ig-follow:active{transform:scale(.97);}
+  .ig-follow svg{width:16px; height:16px; flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="play-row">
+    <div class="left-col">
+      <div class="note">Gunakan foto persegi (1:1), bukan potret atau lanskap, untuk hasil terbaik.</div>
+
+      <div class="card">
+        <div class="header-row">
+          <div class="field">
+            <span>Nama:</span>
+            <input id="playerName" type="text" value="Guest" maxlength="18">
+          </div>
+          <div class="field">
+            <span>Level:</span>
+            <select id="levelSelect">
+              <option value="3">Level 1 · 9 kotak</option>
+              <option value="4" selected>Level 2 · 16 kotak</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="frame">
+          <div class="puzzle-grid" id="puzzleGrid">
+            <div class="placeholder-msg" id="placeholderMsg">
+              <span class="plus">+</span>
+              <span>Ketuk untuk unggah gambar</span>
+            </div>
+          </div>
+          <input type="file" id="imageInput" accept="image/*">
+        </div>
+
+        <div class="controls-row">
+          <div class="timer-block">
+            <div class="timer-label">Waktu</div>
+            <div id="timer">00:00</div>
+            <div class="move-count" id="moveCount"></div>
+          </div>
+          <button id="startBtn" disabled>Mulai</button>
+        </div>
+      </div>
+
+      <div class="share-actions hidden" id="shareActions">
+        <button class="btn btn-primary" id="downloadBtn">Unduh Gambar</button>
+        <button class="btn btn-secondary" id="copyBtn">Salin Teks</button>
+      </div>
+    </div>
+
+    <div class="ref-col">
+      <button id="topShareBtn" title="Salin tautan">Bagikan</button>
+      <div class="ref-preview" id="refPreview">
+        <span class="ref-icon">+</span>
+        <img id="refImg" alt="referensi">
+      </div>
+      <div class="ref-caption">Referensi</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a class="ig-follow" href="https://www.instagram.com/azmi_14.11/" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5"></rect>
+        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+      </svg>
+      Follow @azmi_14.11
+    </a>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="captureCard"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  let gridSize = 4;
+
+  let imageDataURL = null;
+  let tiles = [];
+  let blankPos = 0;
+  let started = false;
+  let solved = false;
+  let timerInterval = null;
+  let startTime = 0;
+  let elapsedMs = 0;
+  let moveCount = 0;
+
+  const playerNameInput = document.getElementById('playerName');
+  const levelSelect = document.getElementById('levelSelect');
+  const imageInput = document.getElementById('imageInput');
+  const refImg = document.getElementById('refImg');
+  const refIcon = document.querySelector('.ref-icon');
+  const puzzleGrid = document.getElementById('puzzleGrid');
+  const placeholderMsg = document.getElementById('placeholderMsg');
+  const startBtn = document.getElementById('startBtn');
+  const timerEl = document.getElementById('timer');
+  const moveCountEl = document.getElementById('moveCount');
+  const shareActions = document.getElementById('shareActions');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const topShareBtn = document.getElementById('topShareBtn');
+  const captureCard = document.getElementById('captureCard');
+  const toast = document.getElementById('toast');
+
+  let toastTimer = null;
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function levelLabel(){
+    return gridSize === 3 ? 'Level 1 · 9 kotak' : 'Level 2 · 16 kotak';
+  }
+
+  puzzleGrid.addEventListener('click', () => {
+    if(started && !solved) return;
+    imageInput.click();
+  });
+
+  imageInput.addEventListener('click', (e) => e.stopPropagation());
+  imageInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      imageDataURL = ev.target.result;
+      refImg.src = imageDataURL;
+      refImg.style.display = 'block';
+      refIcon.style.display = 'none';
+      renderSolvedPreview();
+      updateStartButton();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  levelSelect.addEventListener('change', () => {
+    if(started && !solved) return;
+    gridSize = parseInt(levelSelect.value, 10);
+    if(imageDataURL) renderSolvedPreview();
+  });
+
+  function updateStartButton(){
+    startBtn.disabled = !imageDataURL;
+  }
+
+  function renderSolvedPreview(){
+    started = false;
+    solved = false;
+    stopTimer();
+    elapsedMs = 0;
+    moveCount = 0;
+    moveCountEl.textContent = '';
+    timerEl.textContent = '00:00';
+    startBtn.textContent = 'Mulai';
+    shareActions.classList.add('hidden');
+
+    const n = gridSize;
+    tiles = [];
+    for(let i=0;i<n*n;i++) tiles.push(i);
+    blankPos = n*n - 1;
+
+    buildGridDOM();
+  }
+
+  function buildGridDOM(){
+    const n = gridSize;
+    puzzleGrid.innerHTML = '';
+    puzzleGrid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    puzzleGrid.style.gridTemplateRows = `repeat(${n}, 1fr)`;
+
+    for(let pos=0; pos<n*n; pos++){
+      const tileDiv = document.createElement('div');
+      const originalIndex = tiles[pos];
+      tileDiv.className = 'tile';
+      tileDiv.dataset.pos = pos;
+
+      if(originalIndex === n*n - 1){
+        tileDiv.classList.add('blank');
+      } else {
+        const row = Math.floor(originalIndex / n);
+        const col = originalIndex % n;
+        tileDiv.style.backgroundImage = `url(${imageDataURL})`;
+        tileDiv.style.backgroundSize = `${n*100}% ${n*100}%`;
+        tileDiv.style.backgroundPosition = `${(col*100)/(n-1)}% ${(row*100)/(n-1)}%`;
+      }
+
+      tileDiv.addEventListener('click', onTileClick);
+      puzzleGrid.appendChild(tileDiv);
+    }
+  }
+
+  function shuffle(){
+    const n = gridSize;
+    tiles = [];
+    for(let i=0;i<n*n;i++) tiles.push(i);
+    blankPos = n*n - 1;
+
+    let lastMove = -1;
+    const totalShuffles = n*n*40;
+    for(let s=0; s<totalShuffles; s++){
+      const neighbors = getNeighbors(blankPos, n);
+      const options = neighbors.filter(p => p !== lastMove);
+      const pick = options[Math.floor(Math.random()*options.length)];
+      swapTiles(pick, blankPos);
+      lastMove = blankPos;
+      blankPos = pick;
+    }
+  }
+
+  function getNeighbors(pos, n){
+    const row = Math.floor(pos/n), col = pos % n;
+    const result = [];
+    if(row > 0) result.push(pos - n);
+    if(row < n-1) result.push(pos + n);
+    if(col > 0) result.push(pos - 1);
+    if(col < n-1) result.push(pos + 1);
+    return result;
+  }
+
+  function swapTiles(a, b){
+    const tmp = tiles[a];
+    tiles[a] = tiles[b];
+    tiles[b] = tmp;
+  }
+
+  function onTileClick(e){
+    if(!started || solved) return;
+    e.stopPropagation();
+    const pos = parseInt(e.currentTarget.dataset.pos, 10);
+    const n = gridSize;
+    const neighbors = getNeighbors(blankPos, n);
+    if(neighbors.includes(pos)){
+      swapTiles(pos, blankPos);
+      blankPos = pos;
+      moveCount++;
+      moveCountEl.textContent = moveCount + ' langkah';
+      buildGridDOM();
+      checkWin();
+    }
+  }
+
+  function checkWin(){
+    const n = gridSize;
+    for(let i=0;i<n*n;i++){
+      if(tiles[i] !== i) return;
+    }
+    solved = true;
+    onSolved();
+  }
+
+  function startTimer(){
+    startTime = Date.now();
+    timerInterval = setInterval(() => {
+      elapsedMs = Date.now() - startTime;
+      timerEl.textContent = formatTime(elapsedMs);
+    }, 250);
+  }
+  function stopTimer(){
+    if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+  }
+  function formatTime(ms){
+    const totalSec = Math.floor(ms/1000);
+    const mm = String(Math.floor(totalSec/60)).padStart(2,'0');
+    const ss = String(totalSec%60).padStart(2,'0');
+    return `${mm}:${ss}`;
+  }
+
+  startBtn.addEventListener('click', () => {
+    if(!imageDataURL) return;
+    shuffle();
+    buildGridDOM();
+    started = true;
+    solved = false;
+    moveCount = 0;
+    moveCountEl.textContent = '0 langkah';
+    elapsedMs = 0;
+    startBtn.disabled = true;
+    startBtn.textContent = 'Berjalan...';
+    shareActions.classList.add('hidden');
+    startTimer();
+  });
+
+  function onSolved(){
+    stopTimer();
+    startBtn.disabled = false;
+    startBtn.textContent = 'Mulai';
+    shareActions.classList.remove('hidden');
+    shareActions.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+
+  // ---------- Build a capture card showing the CUT-UP solved image + level info ----------
+  function buildCaptureCard(){
+    const n = gridSize;
+    const name = (playerNameInput.value || 'Guest').trim() || 'Guest';
+    const time = timerEl.textContent;
+    const moves = moveCount + ' langkah';
+    const level = levelLabel();
+
+    let tilesHtml = '';
+    for(let row=0; row<n; row++){
+      for(let col=0; col<n; col++){
+        const bgPos = `${(col*100)/(n-1)}% ${(row*100)/(n-1)}%`;
+        tilesHtml += `<div style="background-image:url(${imageDataURL}); background-size:${n*100}% ${n*100}%; background-position:${bgPos}; background-repeat:no-repeat; border:1px solid rgba(255,255,255,0.55);"></div>`;
+      }
+    }
+
+    captureCard.innerHTML = `
+      <div style="width:420px; padding:32px 28px; background:#0a0a0a; font-family:'Inter', sans-serif; color:#f2f2f2; text-align:center; border:1px solid #262626;">
+        <div style="margin:0 auto; width:300px; aspect-ratio:1/1; display:grid; grid-template-columns:repeat(${n},1fr); grid-template-rows:repeat(${n},1fr); gap:3px; background:#000; border-radius:8px; overflow:hidden;">
+          ${tilesHtml}
+        </div>
+        <div style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#7a7a7a; margin-top:16px;">${level}</div>
+        <div style="font-size:16px; font-weight:700; margin-top:6px;">${escapeHtml(name)}</div>
+        <div style="font-size:36px; font-weight:800; margin-top:4px;">${time}</div>
+        <div style="font-size:11px; color:#7a7a7a; margin-top:4px;">${moves}</div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  async function captureCanvas(){
+    buildCaptureCard();
+    const cardEl = captureCard.firstElementChild;
+    const canvas = await html2canvas(cardEl, {backgroundColor: '#0a0a0a', scale: 2});
+    return canvas;
+  }
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  downloadBtn.addEventListener('click', async () => {
+    downloadBtn.disabled = true;
+    const originalText = downloadBtn.textContent;
+    downloadBtn.textContent = 'Menyiapkan...';
+    try{
+      const canvas = await captureCanvas();
+      canvas.toBlob((blob) => {
+        downloadBlob(blob, 'puzzleslider.png');
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = originalText;
+        showToast('Gambar hasil diunduh');
+      }, 'image/png');
+    }catch(err){
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = originalText;
+      showToast('Gagal mengunduh gambar');
+    }
+  });
+
+  function resultText(){
+    const name = (playerNameInput.value || 'Guest').trim() || 'Guest';
+    const time = timerEl.textContent;
+    const moves = moveCount + ' langkah';
+    const url = window.location.href;
+    return `${name} berhasil menyelesaikan puzzle ${levelLabel()} dalam waktu ${time} dengan ${moves}! Coba juga di ${url}`;
+  }
+
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      return true;
+    }catch(err){
+      try{
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        return true;
+      }catch(e2){
+        return false;
+      }
+    }
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    const ok = await copyText(resultText());
+    showToast(ok ? 'Teks hasil disalin' : 'Gagal menyalin teks');
+  });
+
+  topShareBtn.addEventListener('click', async () => {
+    const url = window.location.href;
+    const text = `Ayo coba ${url}`;
+    const ok = await copyText(text);
+    showToast(ok ? 'Tautan disalin' : 'Gagal menyalin tautan');
+  });
+
+  updateStartButton();
+})();
+</script>
+</body>
+</html>
